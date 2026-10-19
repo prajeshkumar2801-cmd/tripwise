@@ -86,10 +86,11 @@ export const POPULAR_GLOBAL_DESTINATIONS: Destination[] = [
     rating: 4.8,
     reviewsCount: 52180,
     description: 'An expansive 843-acre emerald sanctuary in Manhattan featuring tranquil lakes, winding walking paths, Bethesda Terrace, and lush meadows.',
-    image: 'https://images.unsplash.com/photo-1538688525198-9b88f6f53126?auto=format&fit=crop&w=1200&q=80',
+    image: 'https://images.unsplash.com/photo-1534430480872-3498386e7856?auto=format&fit=crop&w=1200&q=80',
     galleryImages: [
       'https://images.unsplash.com/photo-1508739773434-c26b3d09e071?auto=format&fit=crop&w=1000&q=80',
-      'https://images.unsplash.com/photo-1568515045052-f9a854d70bfd?auto=format&fit=crop&w=1000&q=80'
+      'https://images.unsplash.com/photo-1568515045052-f9a854d70bfd?auto=format&fit=crop&w=1000&q=80',
+      'https://images.unsplash.com/photo-1576495199011-eb94736d05d6?auto=format&fit=crop&w=1000&q=80'
     ],
     address: 'Central Park, New York, NY 10022, United States',
     coordinates: {

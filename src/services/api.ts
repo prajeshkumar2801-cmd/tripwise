@@ -1,5 +1,6 @@
 import type { Destination, CategoryType, FilterOptions, SortOption } from '../types/destination';
 import { POPULAR_GLOBAL_DESTINATIONS } from './destinationData';
+import { resolveDestinationImage } from './imageResolver';
 
 const GEOAPIFY_API_KEY = import.meta.env.VITE_GEOAPIFY_API_KEY || '';
 
@@ -21,52 +22,6 @@ const CATEGORY_MAP: Record<CategoryType, string> = {
   Museums: 'entertainment.museum,tourism.attraction.museum',
   Activities: 'entertainment,leisure,sport',
 };
-
-// High quality curated stock photos by category for real places that do not return direct photo URLs
-const CATEGORY_FALLBACK_IMAGES: Record<CategoryType, string[]> = {
-  All: [
-    'https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80',
-  ],
-  Attractions: [
-    'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1200&q=80',
-  ],
-  Restaurants: [
-    'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=1200&q=80',
-  ],
-  Hotels: [
-    'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&w=1200&q=80',
-  ],
-  Nature: [
-    'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1426604966848-d7adac402bff?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80',
-  ],
-  Museums: [
-    'https://images.unsplash.com/photo-1565099824688-e93eb20fe622?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1582561424760-0321d75e81fa?auto=format&fit=crop&w=1200&q=80',
-  ],
-  Activities: [
-    'https://images.unsplash.com/photo-1503614472-8c93d56e92ce?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1472396961693-142e6e269027?auto=format&fit=crop&w=1200&q=80',
-  ],
-};
-
-function getRandomImageForCategory(category: CategoryType, seed: string): string {
-  const images = CATEGORY_FALLBACK_IMAGES[category] || CATEGORY_FALLBACK_IMAGES.All;
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) {
-    hash = (hash << 5) - hash + seed.charCodeAt(i);
-  }
-  const index = Math.abs(hash) % images.length;
-  return images[index];
-}
 
 function mapGeoapifyCategory(categories: string[] = []): CategoryType {
   const catStr = categories.join(',').toLowerCase();
@@ -135,7 +90,7 @@ async function fetchFromGeoapify(options: FilterOptions): Promise<Destination[]>
         rating,
         reviewsCount,
         description: `Explore ${name} located in ${city}${country ? `, ${country}` : ''}. A featured place of interest offering visitors memorable experiences and local culture.`,
-        image: getRandomImageForCategory(category, name),
+        image: resolveDestinationImage(name, city, category),
         address,
         coordinates: { lat, lon },
         features: ['Real-time Geocoded', 'Accessible Location', 'Public Access', 'Verified Coordinates'],
@@ -195,6 +150,11 @@ async function fetchFromLiveNominatim(query: string, category: CategoryType): Pr
     const rating = Number((4.3 + (idx % 6) * 0.1).toFixed(1));
     const reviewsCount = 350 + idx * 85;
 
+    const directImg =
+      typeof item.extratags?.image === 'string' && item.extratags.image.startsWith('http')
+        ? item.extratags.image
+        : undefined;
+
     const destination: Destination = {
       id,
       name,
@@ -205,7 +165,7 @@ async function fetchFromLiveNominatim(query: string, category: CategoryType): Pr
       rating,
       reviewsCount,
       description: `Discovered live via OpenStreetMap: ${item.display_name}. Notable destination for travelers exploring ${city}.`,
-      image: getRandomImageForCategory(mappedCategory, name),
+      image: resolveDestinationImage(name, city, mappedCategory, directImg),
       address: item.display_name,
       coordinates: { lat, lon },
       features: ['Live Coordinates', 'OpenStreetMap Verified', 'Local Landmark'],
@@ -365,7 +325,7 @@ export async function fetchDestinationById(id: string): Promise<Destination> {
             rating: 4.8,
             reviewsCount: 1540,
             description: p.formatted || 'A verified destination discovered via Geoapify.',
-            image: getRandomImageForCategory(category, p.name || id),
+            image: resolveDestinationImage(p.name || id, p.city || p.county || '', category),
             address: p.formatted || '',
             coordinates: { lat: p.lat || 0, lon: p.lon || 0 },
             features: ['Geoapify Verified', 'Live Coordinates'],
